@@ -1,4 +1,4 @@
-CFLAGS=-Os -fomit-frame-pointer -nostartfiles -lSDL -lGL
+CFLAGS=-Os -fomit-frame-pointer -nostartfiles -lSDL -lGL -lasound
 
 invitro.min: invitro
 	strip -s -R .comment -R .gnu.version $^

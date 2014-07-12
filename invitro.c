@@ -1,6 +1,6 @@
 #include "GL/gl.h"
 #include "SDL/SDL.h"
-#include "sys/soundcard.h"
+#include <alsa/asoundlib.h>
 #include "fcntl.h"
 #include "sys/ioctl.h"
 #include "unistd.h"
@@ -12,11 +12,11 @@ void _start()
     int audio_fd,i;
     short audio_buffer[4096];
 
-    audio_fd = open("/dev/dsp", O_WRONLY, 0);
-    i=AFMT_S16_LE;ioctl(audio_fd,SNDCTL_DSP_SETFMT,&i);
-    i=1;ioctl(audio_fd,SNDCTL_DSP_CHANNELS,&i);
-    i=11024;ioctl(audio_fd,SNDCTL_DSP_SPEED,&i);
+    // Set up audio
+    snd_pcm_t *snd_handle;
+    snd_pcm_open(&snd_handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
 
+    //Generate audio
     for (i=0;i<4096;i++)
     {
         audio_buffer[i]=i<<8;
@@ -41,8 +41,8 @@ void _start()
 
     do
     {
-        ioctl(audio_fd,SNDCTL_DSP_SYNC);
-        write(audio_fd,audio_buffer,8192);
+        ++i % 4096;
+        snd_pcm_writei(snd_handle, audio_buffer[i], 1);
         SDL_PollEvent(&event);
     } while (event.type!=SDL_KEYDOWN);
 
