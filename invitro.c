@@ -146,13 +146,9 @@ void _start()
     SDL_ShowCursor(SDL_DISABLE);
 
 
-//    SDL_GL_SwapBuffers();
+    SDL_GL_SwapBuffers();
 
     // map_exposure=2.0; colorful=0.5;
-    // xf.init(0.3333,&singleton_spherical,0.4,"0.5 0 0 0.5 -0.566  0.400" ); xfm.push_back(xf);
-    // xf.init(0.3333,&singleton_spherical,0.4,"0.5 0 0 0.5  0.566  0.400"); xfm.push_back(xf);
-    // xf.init(0.3333,&singleton_spherical,0.4,"0.5 0 0 0.5  0.000 -0.551"); xfm.push_back(xf);
-
 
     float opts[3][16] = {
     //       0     1      2     3         4       5     6     7     8     9    10    11    12      13       14    15
@@ -167,6 +163,25 @@ void _start()
     setInvMat(opts[0]);
     setInvMat(opts[1]);
     setInvMat(opts[2]);
+
+    GLuint fbo = 0;
+    glGenFramebuffers(1, &fbo);
+
+    // We render splittly because performanz
+    GLuint grid[RES+1][2] = {{0}};
+
+    // Load shadurrz
+    GLhandleARB prog = glCreateProgram();
+    GLhandleARB vo = makeShaderObject(GL_VERTEX_SHADER_ARB, vertexShader);
+    GLhandleARB fo = makeShaderObject(GL_FRAGMENT_SHADER_ARB, fragmentShader);
+    glAttachShader(prog, vo);
+    glAttachShader(prog, fo);
+    glLinkProgram(prog);
+
+    checkShaderOp(prog, GL_OBJECT_LINK_STATUS_ARB);
+
+    glDeleteObjectARB(vo);
+    glDeleteObjectARB(fo);
 
     do
     {
@@ -190,7 +205,6 @@ void _start()
         glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
         glLoadIdentity();
 
-        static GLuint grid[RES+1][2] = {{0}};
         GLuint frameSrc=0, frameDst;
         if (grid[0][0] == 0) { // First time, set up
             glGenTextures(2 * (RES + 1), &grid[0][0]);
@@ -211,14 +225,8 @@ void _start()
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 16);
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
                     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-
                 }
             }
-        }
-
-        static GLuint fbo = 0;
-        if (fbo == 0) {
-            glGenFramebuffers(1, &fbo);
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo);
@@ -246,14 +254,12 @@ void _start()
                                        frameDst,
                                        0);
 
-#ifdef DEBUG
                 GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
                 if (status != GL_FRAMEBUFFER_COMPLETE) {
                     printf("level: %d fitte: %d\n", level, status);
                     SDL_Quit();
                     exit(1);
                 }
-#endif
                 glDisable(GL_DEPTH_TEST);
                 glViewport(0,0, width, height);
                 glScissor(0,0, width, height);
@@ -293,28 +299,14 @@ void _start()
 
                 glDisable(GL_BLEND); // avoids erasing
 
-                static GLhandleARB prog = 0;
-                if (prog == 0) {
-                    prog = glCreateProgram();
-                    GLhandleARB vo = makeShaderObject(GL_VERTEX_SHADER_ARB, vertexShader);
-                    GLhandleARB fo = makeShaderObject(GL_FRAGMENT_SHADER_ARB, fragmentShader);
-                    glAttachObjectARB(prog, vo);
-                    glAttachObjectARB(prog, fo);
-                    glLinkProgram(prog);
-
-                    checkShaderOp(prog, GL_OBJECT_LINK_STATUS_ARB);
-
-                    glDeleteObjectARB(vo);
-                    glDeleteObjectARB(fo);
-                }
                 glUseProgramObjectARB(prog);
                 glUniform1iARB(glGetUniformLocationARB(prog,"tex"),0);
                 glUniform1fARB(glGetUniformLocationARB(prog,"texscale"), TEXSCALE);
                 glUniform1fARB(glGetUniformLocationARB(prog,"texscalei"), 1/TEXSCALE);
 
-                glUniform2fvARB(glGetUniformLocationARB(prog, "xf0", 8, &opts[0]));
-                glUniform2fvARB(glGetUniformLocationARB(prog, "xf1", 8, &opts[16]));
-                glUniform2fvARB(glGetUniformLocationARB(prog, "xf2", 8, &opts[32]));
+                glUniform2fvARB(glGetUniformLocationARB(prog, "xf0", 16, &opts[0]));
+                glUniform2fvARB(glGetUniformLocationARB(prog, "xf1", 16, &opts[16]));
+                glUniform2fvARB(glGetUniformLocationARB(prog, "xf2", 16, &opts[32]));
 
                 glEnable(GL_BLEND);
                 glBindTexture(GL_TEXTURE_2D, frameDst);
