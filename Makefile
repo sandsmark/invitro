@@ -4,7 +4,7 @@ invitro.min: invitro
 	strip -s -R .comment -R .gnu.version $^
 	sstrip -z $^
 	cp unpack.header $@
-	gzip -cn9 $^ >> $@
+	xz -ce9 $^ >> $@
 	chmod +x $@
 
 invitro: invitro.c
